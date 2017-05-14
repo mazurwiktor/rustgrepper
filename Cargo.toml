@@ -1,0 +1,12 @@
+[package]
+name = "rustgrepper"
+version = "0.1.0"
+authors = ["Wiktor Mazur <wiktormazur1@gmail.com>"]
+
+[features]
+window=[]
+
+[dependencies]
+ncurses = "5.85.0"
+cgmath = "0.13.0"
+regex = "0.2"
