@@ -123,7 +123,7 @@ impl<'a> Line<'a> {
     }
 }
 
-fn match_against_pattern(line_buffer: &str, pattern: &str) -> Option<String> {
+pub fn match_against_pattern(line_buffer: &str, pattern: &str) -> Option<String> {
     let re = regex::Regex::new(pattern).unwrap();
     let mut capture = "".to_string();
     for cap in re.captures_iter(line_buffer) {
@@ -192,17 +192,20 @@ fn test_pattern_decorations() {
     let buffer = &"SOME TEST BUFFER";
     text.fill_from_buffer(buffer);
 
-    assert_eq!(text.lines[0]
-                   .decorate(vec![DecorationPattern::from_single_attr(Attribute::Inverse, &"SOME")])
+    assert_eq!(text.lines[0].decorate(vec![DecorationPattern::from_single_attr(Attribute::Inverse,
+                                                                      &"SOME")])
                    [0],
                Decorations::Some(vec![Attribute::Inverse], &"SOME"));
-    assert_eq!(text.lines[0].decorate(vec![DecorationPattern::from_single_attr(Attribute::Inverse, &"TEST")])
+    assert_eq!(text.lines[0].decorate(vec![DecorationPattern::from_single_attr(Attribute::Inverse,
+                                                                      &"TEST")])
                    [0],
                Decorations::None(&"SOME "));
-    assert_eq!(text.lines[0].decorate(vec![DecorationPattern::from_single_attr(Attribute::Inverse, &"TEST")])
+    assert_eq!(text.lines[0].decorate(vec![DecorationPattern::from_single_attr(Attribute::Inverse,
+                                                                      &"TEST")])
                    [1],
                Decorations::Some(vec![Attribute::Inverse], &"TEST"));
-    assert_eq!(text.lines[0].decorate(vec![DecorationPattern::from_single_attr(Attribute::Inverse, &"TEST")])
+    assert_eq!(text.lines[0].decorate(vec![DecorationPattern::from_single_attr(Attribute::Inverse,
+                                                                      &"TEST")])
                    [2],
                Decorations::None(&" BUFFER"));
 }
@@ -253,6 +256,79 @@ fn match_same_pattern() {
     let decorated_line = text.lines[0].decorate(decorations);
     //assert!(false);
     assert_eq!(decorated_line.len(), 5);
+}
+
+pub fn find_closest_index(indexes: &[usize], search: usize) -> Option<usize> {
+    let idx = indexes.binary_search(&search);
+    if indexes.is_empty() {
+        return None;
+    }
+    match idx {
+        Ok(found) => return Some(indexes[found]),
+        Err(mut closest) => {
+            if closest == indexes.len() {
+                closest = indexes.len() - 1;
+            }
+            if closest < indexes.len() / 2 {
+                for (i, number) in indexes.iter().enumerate() {
+                    if *number > search {
+                        if i != 0 {
+                            return Some(indexes[i - 1]);
+                        } else {
+                            return Some(*number);
+                        }
+
+                    }
+                }
+            } else {
+                for (i, number) in indexes.iter().rev().enumerate() {
+                    if *number < search {
+                        if i != 0 {
+                            return Some(indexes[i - 1]);
+                        } else {
+                            return Some(*number);
+                        }
+
+                    }
+                }
+            }
+        }
+    }
+    None
+}
+
+#[test]
+fn find_closest_index_test() {
+    let test_data = (10..20 + 1).collect::<Vec<usize>>();
+
+    assert_eq!(Some(10), find_closest_index(&test_data, 9));
+    assert_eq!(Some(10), find_closest_index(&test_data, 1));
+    assert_eq!(Some(20), find_closest_index(&test_data, 21));
+    assert_eq!(Some(10), find_closest_index(&test_data, 10));
+    assert_eq!(Some(20), find_closest_index(&test_data, 100));
+}
+
+#[test]
+fn find_closest_index_more_data_test() {
+    let mut first = (10..20 + 1).collect::<Vec<usize>>();
+    let second = (40..60 + 1).collect::<Vec<usize>>();
+    first.extend(second);
+    let test_data = first;
+
+    assert_eq!(Some(10), find_closest_index(&test_data, 9));
+    assert_eq!(Some(10), find_closest_index(&test_data, 1));
+    assert_eq!(Some(20), find_closest_index(&test_data, 21));
+    assert_eq!(Some(10), find_closest_index(&test_data, 10));
+    assert_eq!(Some(15), find_closest_index(&test_data, 15));
+    assert_eq!(Some(60), find_closest_index(&test_data, 100));
+}
+
+
+#[test]
+fn find_closest_index_empty_test() {
+    let test_data = Vec::new();
+
+    assert_eq!(None, find_closest_index(&test_data, 10));
 }
 
 pub fn test_buffer_from_file() -> String {

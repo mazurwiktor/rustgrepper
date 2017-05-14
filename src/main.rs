@@ -48,7 +48,7 @@ impl Pager {
                     self.print_decoration(word);
                 }
             }
-            if self.curr_y < end_height - 2 {
+            if self.curr_y <= end_height - 1 {
                 printw("\n");
                 scrolled += 1;
             }
@@ -72,10 +72,8 @@ impl Pager {
                     match attr {
                         &utils::Attribute::Inverse => {
                             attron(A_REVERSE());
-                        },
-                        &utils::Attribute::Red => {
-                            
                         }
+                        &utils::Attribute::Red => {}
                         _ => {}    
                     }
                 }
@@ -115,6 +113,7 @@ impl Drop for Pager {
 struct Grep<'a> {
     patern: String,
     line_index: usize,
+    search_lines_idxs: Vec<usize>,
     lines: Vec<utils::Line<'a>>,
 }
 
@@ -130,6 +129,7 @@ impl<'a> Greps<'a> {
         let greps = vec![Grep {
                              patern: "ROOT".to_string(),
                              line_index: 0,
+                             search_lines_idxs: Vec::new(),
                              lines: lines,
                          }];
         Greps {
@@ -149,6 +149,17 @@ impl<'a> Greps<'a> {
     }
 
     fn apply_search_patern(&mut self, pattern: &str) {
+        let re = Regex::new(&pattern).unwrap();
+
+        let search_lines_idxs = self.greps[self.selected]
+            .lines
+            .iter()
+            .enumerate()
+            .filter(|&(_, ref l)| re.is_match(l.buffer))
+            .map(|(idx, _)| idx)
+            .collect();
+        self.greps[self.selected].search_lines_idxs = search_lines_idxs;
+        self.greps[self.selected].line_index = self.greps[self.selected].search_lines_idxs[0];
         self.decorations.remove(&self.current_search_pattern);
         self.current_search_pattern = pattern.to_string();
         self.decorations
@@ -179,26 +190,78 @@ impl<'a> Greps<'a> {
             printw(" ");
             idx += 1;
         }
-
+        // printw(&format!("DEBUG: [greps] cur line: {} indexes {:?}",
+        //                 self.current_grep().line_index,
+        //                 self.current_grep().search_lines_idxs));
         fill_current_line();
     }
 
     fn new_grep(&mut self, patern: &str) {
         let cur_patern = self.current_grep().patern.clone();
         let re = Regex::new(&patern).unwrap();
+        let mut search_lines_idxs = Vec::new();
         let new_lines = self.greps[self.selected]
             .lines
             .clone()
             .into_iter()
-            .filter(|l| re.is_match(&l.buffer))
+            .enumerate()
+            .filter(|&(_, ref l)| re.is_match(l.buffer))
+            .map(|(idx, l)| {
+                     search_lines_idxs.push(idx);
+                     l
+                 })
             .collect();
 
         self.greps.push(Grep {
                             patern: cur_patern + " > " + patern,
                             line_index: 0,
+                            search_lines_idxs: search_lines_idxs,
                             lines: new_lines,
                         });
         self.selected = self.greps.len() - 1;
+    }
+
+    fn modify_search<F>(&mut self, modifier: F)
+        where F: Fn(usize) -> usize
+    {
+        let search_lines_idxs = self.greps[self.selected].search_lines_idxs.clone();
+        let current_line_idx = self.greps[self.selected].line_index;
+
+        match utils::find_closest_index(&search_lines_idxs, current_line_idx) {
+            Some(found_idx) => {
+                if found_idx == current_line_idx {
+                    match search_lines_idxs.binary_search(&found_idx) {
+                        Ok(idx) => {
+                            match search_lines_idxs.get(modifier(idx)) {
+                                Some(_) => {
+                                    self.greps[self.selected].line_index = search_lines_idxs
+                                        [modifier(idx)]
+                                }
+                                None => {}
+                            }
+                        }
+                        Err(_) => {}
+                    }
+                } else {
+                    self.greps[self.selected].line_index = found_idx;
+                }
+            }
+            None => {}
+        }
+    }
+
+    pub fn next_search(&mut self) {
+        self.modify_search(|searches_idx| searches_idx + 1);
+    }
+
+    pub fn prev_search(&mut self) {
+        self.modify_search(|searches_idx| {
+            if searches_idx != 0 {
+                searches_idx - 1
+            } else {
+                searches_idx
+            }
+        });
     }
 
     fn select_one_to_left(&mut self) {
@@ -241,7 +304,7 @@ fn main() {
                 greps.apply_search_patern(&pat);
             }
             Prompt::GrepPattern(pat) => {
-                 greps.new_grep(&pat);
+                greps.new_grep(&pat);
                 clear();
             }
             Prompt::GrepLeft => greps.select_one_to_left(),
@@ -264,6 +327,8 @@ fn main() {
                 let last_index = greps.current_grep().lines.len() - capacity + 1;
                 greps.change_current_line_index(last_index);
             }
+            Prompt::NextSearch => greps.next_search(),
+            Prompt::PrevSearch => greps.prev_search(),
             //_ => {}
         }
 
@@ -284,6 +349,8 @@ enum Prompt {
     GrepLeft,
     GrepRight,
     CloseGrep,
+    NextSearch,
+    PrevSearch,
 }
 
 enum PromptMode {
@@ -359,6 +426,12 @@ fn prompt(mode: PromptMode) -> Prompt {
                     }
                     'G' => {
                         return Prompt::ScrollBottom;
+                    }
+                    'n' => {
+                        return Prompt::NextSearch;
+                    }
+                    'N' => {
+                        return Prompt::PrevSearch;
                     }
                     x if x == KeyCodes::CtrlPlusW as u8 as char => {
                         return Prompt::CloseGrep;
