@@ -101,23 +101,18 @@ impl<'a> Greps<'a> {
     fn new_grep(&mut self, patern: &str) {
         let cur_patern = self.current_grep().patern.clone();
         let re = Regex::new(&patern).unwrap();
-        let mut search_lines_idxs = Vec::new();
         let new_lines = self.greps[self.selected]
             .lines
             .clone()
             .into_iter()
-            .enumerate()
-            .filter(|&(_, ref l)| re.is_match(l.buffer))
-            .map(|(idx, l)| {
-                     search_lines_idxs.push(idx);
-                     l
-                 })
+            .filter(|l| re.is_match(l.buffer))
+            .map(|l| l)
             .collect();
 
         self.greps.push(Grep {
                             patern: cur_patern + " > " + patern,
                             line_index: 0,
-                            search_lines_idxs: search_lines_idxs,
+                            search_lines_idxs: Vec::new(),
                             lines: new_lines,
                         });
         self.selected = self.greps.len() - 1;
@@ -157,13 +152,11 @@ impl<'a> Greps<'a> {
     }
 
     pub fn prev_search(&mut self) {
-        self.modify_search(|searches_idx| {
-            if searches_idx != 0 {
-                searches_idx - 1
-            } else {
-                searches_idx
-            }
-        });
+        self.modify_search(|searches_idx| if searches_idx != 0 {
+                               searches_idx - 1
+                           } else {
+                               searches_idx
+                           });
     }
 
     fn select_one_to_left(&mut self) {
@@ -193,11 +186,9 @@ fn main() {
     pager.initialize();
     let mut greps = Greps::new(utils::Text::from(&buffer).lines);
 
-    let capacity = pager.execute_logs(&greps.current_grep().lines, greps.decorations());
-
     loop {
         let index = greps.current_grep().line_index;
-        pager.execute_logs(&greps.current_grep().lines[index..], greps.decorations());
+        let printed_lines = pager.execute_logs(&greps.current_grep().lines[index..], greps.decorations());
 
         greps.status();
         match prompt(PromptMode::Visual) {
@@ -214,7 +205,7 @@ fn main() {
             Prompt::CloseGrep => greps.close_grep(),
             Prompt::SingleLineDown => {
                 let last_index = greps.current_grep().lines.len() - 1;
-                if index < last_index - capacity + 2 {
+                if index < last_index - printed_lines + 2 {
                     greps.change_current_line_index(index + 1)
                 }
             }
@@ -224,9 +215,9 @@ fn main() {
                 }
             }
             Prompt::ScrollTop => greps.change_current_line_index(0),
-            Prompt::NextPage => greps.change_current_line_index(index + capacity),
+            Prompt::NextPage => greps.change_current_line_index(index + printed_lines),
             Prompt::ScrollBottom => {
-                let last_index = greps.current_grep().lines.len() - capacity + 1;
+                let last_index = greps.current_grep().lines.len() - printed_lines + 1;
                 greps.change_current_line_index(last_index);
             }
             Prompt::NextSearch => greps.next_search(),

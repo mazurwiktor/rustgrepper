@@ -30,13 +30,13 @@ impl Pager {
                         lines: &[utils::Line],
                         greps: Vec<utils::DecorationPattern>)
                         -> usize {
-        let mut scrolled = 0;
+        let mut printed_lines = 0;
 
         for line in lines {
             getyx(stdscr(), &mut self.curr_y, &mut self.curr_x);
             let end_height = self.screen_height - 2;
             if self.curr_y >= end_height {
-                return scrolled;
+                return printed_lines;
             } else {
                 for word in &line.decorate(greps.clone()) {
                     self.print_decoration(word);
@@ -44,7 +44,7 @@ impl Pager {
             }
             if self.curr_y <= end_height - 1 {
                 printw("\n");
-                scrolled += 1;
+                printed_lines += 1;
             }
         }
 
@@ -53,7 +53,7 @@ impl Pager {
             printw("~\n");
         }
 
-        return scrolled;
+        return printed_lines;
     }
 
     fn print_decoration(&self, decoration: &utils::Decorations) {
@@ -102,4 +102,34 @@ impl Drop for Pager {
         mv(self.screen_height - 1, 0);
         endwin();
     }
+}
+
+pub fn fill_current_line() {
+    let mut x = 0;
+    let mut y = 0;
+    let mut max_y = 0;
+    let mut max_x = 0;
+    getyx(stdscr(), &mut y, &mut x);
+    getmaxyx(stdscr(), &mut max_y, &mut max_x);
+    let mut clear_line = String::new();
+    for _ in (x - 1)..max_x {
+        clear_line.push(' ');
+    }
+    printw(&clear_line);
+}
+
+pub fn clear_current_line() {
+    let mut x = 0;
+    let mut y = 0;
+    let mut max_y = 0;
+    let mut max_x = 0;
+    getyx(stdscr(), &mut y, &mut x);
+    getmaxyx(stdscr(), &mut max_y, &mut max_x);
+    mv(y, 0);
+    let mut clear_line = String::new();
+    for _ in 0..max_x {
+        clear_line.push(' ');
+    }
+    printw(&clear_line);
+    mv(y, 0);
 }

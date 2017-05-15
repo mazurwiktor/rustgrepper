@@ -1,4 +1,5 @@
 use ncurses::*;
+use pager::clear_current_line;
 
 #[allow(unused)]
 pub enum Prompt {
@@ -165,34 +166,4 @@ pub fn prompt(mode: PromptMode) -> Prompt {
             }
         }
     }
-}
-
-pub fn fill_current_line() {
-    let mut x = 0;
-    let mut y = 0;
-    let mut max_y = 0;
-    let mut max_x = 0;
-    getyx(stdscr(), &mut y, &mut x);
-    getmaxyx(stdscr(), &mut max_y, &mut max_x);
-    let mut clear_line = String::new();
-    for _ in (x - 1)..max_x {
-        clear_line.push(' ');
-    }
-    printw(&clear_line);
-}
-
-pub fn clear_current_line() {
-    let mut x = 0;
-    let mut y = 0;
-    let mut max_y = 0;
-    let mut max_x = 0;
-    getyx(stdscr(), &mut y, &mut x);
-    getmaxyx(stdscr(), &mut max_y, &mut max_x);
-    mv(y, 0);
-    let mut clear_line = String::new();
-    for _ in 0..max_x {
-        clear_line.push(' ');
-    }
-    printw(&clear_line);
-    mv(y, 0);
 }
