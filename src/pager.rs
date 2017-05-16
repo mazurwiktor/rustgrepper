@@ -1,12 +1,14 @@
 use utils;
 
 use ncurses::*;
+use greps::*;
 
 pub struct Pager {
     screen_width: i32,
     screen_height: i32,
     curr_x: i32,
     curr_y: i32,
+    userbar_height: i32,
 }
 
 impl Pager {
@@ -16,6 +18,7 @@ impl Pager {
             screen_height: 0,
             curr_x: 0,
             curr_y: 0,
+            userbar_height: 2
         }
     }
 
@@ -33,12 +36,13 @@ impl Pager {
         let mut printed_lines = 0;
 
         for line in lines {
-            getyx(stdscr(), &mut self.curr_y, &mut self.curr_x);
-            let end_height = self.screen_height - 2;
+            self.update_cursor_position();
+            let end_height = self.screen_height - self.userbar_height;
             if self.curr_y >= end_height {
                 return printed_lines;
             } else {
                 for word in &line.decorate(greps.clone()) {
+                    self.update_cursor_position();
                     self.print_decoration(word);
                 }
             }
@@ -48,12 +52,16 @@ impl Pager {
             }
         }
 
-        while self.curr_y != (self.screen_height - 3) {
-            getyx(stdscr(), &mut self.curr_y, &mut self.curr_x);
+        while self.curr_y != (self.screen_height - self.userbar_height + 1) {
+            self.update_cursor_position();
             printw("~\n");
         }
 
         return printed_lines;
+    }
+
+    fn update_cursor_position(&mut self) {
+        getyx(stdscr(), &mut self.curr_y, &mut self.curr_x);
     }
 
     fn print_decoration(&self, decoration: &utils::Decorations) {
@@ -85,15 +93,33 @@ impl Pager {
     }
 
     fn print_buffer(&self, buffer: &str) {
-        let end_height = self.screen_height - 2;
+        let end_height = self.screen_height - self.userbar_height;
         let buffer_len = buffer.len();
         let lines_to_end = end_height - self.curr_y;
-        let limit = lines_to_end * self.screen_width;
+        let limit = lines_to_end * self.screen_width - self.curr_x;
         if buffer_len > limit as usize {
             printw(&buffer[..(limit as usize) - 1]);
         } else {
             printw(buffer);
         }
+    }
+
+    pub fn status(&self, greps: &Greps) {
+        clear_current_line();
+        let mut idx = 0;
+        let selected = greps.selected;
+        for grep in &greps.greps {
+            if idx == selected {
+                attron(A_REVERSE());
+                printw(&grep.patern);
+                attroff(A_REVERSE());
+            } else {
+                printw(&grep.patern);
+            }
+            printw(" ");
+            idx += 1;
+        }
+        fill_current_line();
     }
 }
 

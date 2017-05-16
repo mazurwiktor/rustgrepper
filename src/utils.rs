@@ -160,7 +160,7 @@ impl<'a> Text<'a> {
     }
 
     pub fn from(buffer: &'a str) -> Self {
-        Text { lines: buffer.split('\n').map(Line::from).collect() }
+        Text { lines: buffer.lines().map(Line::from).collect() }
     }
 
     #[allow(unused)]
