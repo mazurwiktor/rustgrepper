@@ -1,4 +1,4 @@
-use ncurses::*;
+use pager::*;
 use pager::clear_current_line;
 
 #[allow(unused)]
@@ -45,22 +45,22 @@ pub fn prompt(mode: PromptMode) -> Prompt {
     clear_current_line();
     match mode {
         PromptMode::Visual => {
-            printw(":");
+            print(":");
         }
         PromptMode::Search => {
-            printw("/");
+            print("/");
         }
         PromptMode::Grep => {
-            printw("&/");
+            print("&/");
         }
         PromptMode::Command => {
-            printw("#");
+            print("#");
         }
     }
     loop {
         match mode {
             PromptMode::Visual => {
-                match getch() as u8 as char {
+                match get_char() as u8 as char {
                     ' ' => {
                         return Prompt::NextPage;
                     }
@@ -102,12 +102,12 @@ pub fn prompt(mode: PromptMode) -> Prompt {
                         return Prompt::CloseGrep;
                     }
                     code => {
-                        printw(&format!("{}", code as u8));
+                        print(&format!("{}", code as char));
                     }
                 }
             }
             PromptMode::Search => {
-                match getch() as u8 {
+                match get_char() as u8 {
                     x if x == KeyCodes::ESC as u8 => {
                         return prompt(PromptMode::Visual);
                     }
@@ -116,27 +116,26 @@ pub fn prompt(mode: PromptMode) -> Prompt {
                     }
                     code => {
                         typed.push(code as char);
-                        addch(code as chtype);
+                        print(&format!("{}", code as char));
                     }
                 }
             }
             PromptMode::Grep => {
-                match getch() as u8 {
+                match get_char() as u8 {
                     x if x == KeyCodes::ESC as u8 => {
                         return prompt(PromptMode::Visual);
                     }
                     x if x == KeyCodes::Enter as u8 => {
-                        attroff(A_BOLD());
                         return Prompt::GrepPattern(typed);
                     }
                     code => {
                         typed.push(code as char);
-                        addch(code as chtype);
+                        print(&format!("{}", code as char));
                     }
                 }
             }
             PromptMode::Command => {
-                match getch() as u8 {
+                match get_char() as u8 {
                     x if x == KeyCodes::ESC as u8 => {
                         return prompt(PromptMode::Visual);
                     }
@@ -144,7 +143,7 @@ pub fn prompt(mode: PromptMode) -> Prompt {
                         // find in commands, since is only one return close ^^
                         tabbed = "close".to_string();
                         clear_current_line();
-                        printw(&format!("#{}", tabbed));
+                        print(&format!("#{}", tabbed));
                     }
                     x if x == KeyCodes::Enter as u8 => {
                         let result = if tabbed == "".to_string() {
@@ -160,7 +159,7 @@ pub fn prompt(mode: PromptMode) -> Prompt {
                     }
                     code => {
                         typed.push(code as char);
-                        addch(code as chtype);
+                        print(&format!("{}", code as char));
                     }
                 }
             }

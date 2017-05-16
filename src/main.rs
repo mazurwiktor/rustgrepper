@@ -1,12 +1,11 @@
 extern crate ncurses;
 extern crate regex;
 
-use ncurses::*;
-
 mod utils;
 mod prompt;
 mod pager;
 mod greps;
+
 use prompt::*;
 use pager::*;
 use greps::*;
@@ -30,7 +29,7 @@ fn main() {
             }
             Prompt::GrepPattern(pat) => {
                 greps.new_grep(&pat);
-                clear();
+                clear_screen();
             }
             Prompt::GrepLeft => greps.select_one_to_left(),
             Prompt::GrepRight => greps.select_one_to_right(),
@@ -57,6 +56,6 @@ fn main() {
             //_ => {}
         }
 
-        mv(0, 0);
+        move_cursor_to(0, 0);
     }
 }

@@ -8,5 +8,4 @@ window=[]
 
 [dependencies]
 ncurses = "5.85.0"
-cgmath = "0.13.0"
 regex = "0.2"

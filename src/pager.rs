@@ -1,6 +1,4 @@
 use utils;
-
-use ncurses::*;
 use greps::*;
 
 pub struct Pager {
@@ -18,7 +16,7 @@ impl Pager {
             screen_height: 0,
             curr_x: 0,
             curr_y: 0,
-            userbar_height: 2
+            userbar_height: 2,
         }
     }
 
@@ -27,7 +25,9 @@ impl Pager {
         keypad(stdscr(), true);
         noecho();
         //start_color();
-        getmaxyx(stdscr(), &mut self.screen_height, &mut self.screen_width);
+        let (max_x, max_y) =  get_term_size();
+        self.screen_height = max_y as i32;
+        self.screen_width = max_x as i32;
     }
     pub fn execute_logs(&mut self,
                         lines: &[utils::Line],
@@ -47,21 +47,23 @@ impl Pager {
                 }
             }
             if self.curr_y <= end_height - 1 {
-                printw("\n");
+                print("\n");
                 printed_lines += 1;
             }
         }
 
         while self.curr_y != (self.screen_height - self.userbar_height + 1) {
             self.update_cursor_position();
-            printw("~\n");
+            print("~\n");
         }
 
         return printed_lines;
     }
 
     fn update_cursor_position(&mut self) {
-        getyx(stdscr(), &mut self.curr_y, &mut self.curr_x);
+        let (x, y) = get_cursor_pos();
+        self.curr_x = x as i32;
+        self.curr_y = y as i32;
     }
 
     fn print_decoration(&self, decoration: &utils::Decorations) {
@@ -98,9 +100,9 @@ impl Pager {
         let lines_to_end = end_height - self.curr_y;
         let limit = lines_to_end * self.screen_width - self.curr_x;
         if buffer_len > limit as usize {
-            printw(&buffer[..(limit as usize) - 1]);
+            print(&buffer[..(limit as usize) - 1]);
         } else {
-            printw(buffer);
+            print(buffer);
         }
     }
 
@@ -111,12 +113,12 @@ impl Pager {
         for grep in &greps.greps {
             if idx == selected {
                 attron(A_REVERSE());
-                printw(&grep.patern);
+                print(&grep.patern);
                 attroff(A_REVERSE());
             } else {
-                printw(&grep.patern);
+                print(&grep.patern);
             }
-            printw(" ");
+            print(" ");
             idx += 1;
         }
         fill_current_line();
@@ -125,37 +127,62 @@ impl Pager {
 
 impl Drop for Pager {
     fn drop(&mut self) {
-        mv(self.screen_height - 1, 0);
+        move_cursor_to((self.screen_height - 1) as usize, 0);
         endwin();
     }
 }
 
+use ncurses::*;
+
 pub fn fill_current_line() {
-    let mut x = 0;
-    let mut y = 0;
-    let mut max_y = 0;
-    let mut max_x = 0;
-    getyx(stdscr(), &mut y, &mut x);
-    getmaxyx(stdscr(), &mut max_y, &mut max_x);
+    let (max_x, _) = get_term_size();
+    let (x, _) = get_cursor_pos();   
     let mut clear_line = String::new();
     for _ in (x - 1)..max_x {
         clear_line.push(' ');
     }
-    printw(&clear_line);
+    print(&clear_line);
 }
 
 pub fn clear_current_line() {
-    let mut x = 0;
-    let mut y = 0;
-    let mut max_y = 0;
-    let mut max_x = 0;
-    getyx(stdscr(), &mut y, &mut x);
-    getmaxyx(stdscr(), &mut max_y, &mut max_x);
-    mv(y, 0);
+    let (max_x, _) = get_term_size();
+    let (_, y) = get_cursor_pos();   
+    
+    move_cursor_to(y as usize, 0);
     let mut clear_line = String::new();
     for _ in 0..max_x {
         clear_line.push(' ');
     }
-    printw(&clear_line);
-    mv(y, 0);
+    print(&clear_line);
+    move_cursor_to(y as usize, 0);
+}
+
+pub fn clear_screen() {
+    clear();
+}
+
+pub fn move_cursor_to(x: usize, y: usize) {
+    mv(x as i32, y as i32);
+}
+
+pub fn print(slice: &str) {
+    printw(slice);
+}
+
+pub fn get_char() -> char {
+    getch() as u8 as char
+}
+
+pub fn get_cursor_pos() -> (usize, usize) {
+    let mut x = 0;
+    let mut y = 0;
+    getyx(stdscr(), &mut y, &mut x);
+    (x as usize, y as usize)
+} 
+
+pub fn get_term_size() -> (usize, usize) {
+    let mut x = 0;
+    let mut y = 0;
+    getmaxyx(stdscr(), &mut y, &mut x);
+    (x as usize, y as usize)
 }
