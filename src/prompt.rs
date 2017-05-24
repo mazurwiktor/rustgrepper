@@ -1,5 +1,4 @@
 use pager::*;
-use pager::clear_current_line;
 
 #[allow(unused)]
 pub enum Prompt {
@@ -25,127 +24,103 @@ pub enum PromptMode {
     Command,
 }
 
-#[allow(unused)]
-pub enum KeyCodes {
-    ESC = 27,
-    Tab = 9,
-    Enter = 10,
-    Down = 2,
-    Up = 3,
-    Left = 4,
-    Right = 5,
-    CtrlPlusW = 23,
-}
-
-pub fn prompt(mode: PromptMode) -> Prompt {
+pub fn prompt<P>(pager: &mut P, mode: PromptMode) -> Prompt
+    where P: TermOperations
+{
     let mut typed = String::from("");
     let mut tabbed = String::from("");
 
-    //let commands = vec!["close"];
-    clear_current_line();
+    pager.clear_line();
     match mode {
         PromptMode::Visual => {
-            print(":");
+            pager.print(":");
         }
         PromptMode::Search => {
-            print("/");
+            pager.print("/");
         }
         PromptMode::Grep => {
-            print("&/");
+            pager.print("&/");
         }
         PromptMode::Command => {
-            print("#");
+            pager.print("#");
         }
     }
     loop {
         match mode {
             PromptMode::Visual => {
-                match get_char() as u8 as char {
-                    ' ' => {
-                        return Prompt::NextPage;
-                    }
-                    'q' => return Prompt::Exit,
-                    '/' => {
-                        return prompt(PromptMode::Search);
-                    }
-                    '&' => {
-                        return prompt(PromptMode::Grep);
-                    }
-                    '#' => {
-                        return prompt(PromptMode::Command);
-                    }
-                    x if x == KeyCodes::Down as u8 as char => {
-                        return Prompt::SingleLineDown;
-                    }
-                    x if x == KeyCodes::Up as u8 as char => {
-                        return Prompt::SingleLineUp;
-                    }
-                    x if x == KeyCodes::Left as u8 as char => {
-                        return Prompt::GrepLeft;
-                    }
-                    x if x == KeyCodes::Right as u8 as char => {
-                        return Prompt::GrepRight;
-                    }
-                    'g' => {
-                        return Prompt::ScrollTop;
-                    }
-                    'G' => {
-                        return Prompt::ScrollBottom;
-                    }
-                    'n' => {
-                        return Prompt::NextSearch;
-                    }
-                    'N' => {
-                        return Prompt::PrevSearch;
-                    }
-                    x if x == KeyCodes::CtrlPlusW as u8 as char => {
-                        return Prompt::CloseGrep;
-                    }
-                    code => {
-                        print(&format!("{}", code as char));
-                    }
+                match pager.input_key() {
+                    Key::Char(ch) => {
+                        match ch {
+                            ' ' => {
+                                return Prompt::NextPage;
+                            }
+                            'q' => return Prompt::Exit,
+                            '/' => {
+                                return prompt(pager, PromptMode::Search);
+                            }
+                            '&' => {
+                                return prompt(pager, PromptMode::Grep);
+                            }
+                            '#' => {
+                                return prompt(pager, PromptMode::Command);
+                            }
+                            'g' => {
+                                return Prompt::ScrollTop;
+                            }
+                            'G' => {
+                                return Prompt::ScrollBottom;
+                            }
+                            'n' => {
+                                return Prompt::NextSearch;
+                            }
+                            'N' => {
+                                return Prompt::PrevSearch;
+                            },
+                            c => {
+                                pager.print(&format!("CH: {} code: {} ", c, c as u8));
+                            },
+                        }
+                    },
+                    Key::Down => return Prompt::SingleLineDown,
+                    Key::Up => return Prompt::SingleLineUp,
+                    Key::Left => return Prompt::GrepLeft, 
+                    Key::Right => return Prompt::GrepRight,
+                    Key::Ctrl(ch) => {
+                        match ch {
+                            'w' => return Prompt::CloseGrep,
+                            _ => {}
+                        }
+                    },
+                    _ => {}
                 }
             }
-            PromptMode::Search => {
-                match get_char() as u8 {
-                    x if x == KeyCodes::ESC as u8 => {
-                        return prompt(PromptMode::Visual);
+            PromptMode::Search | PromptMode::Grep => {
+                match pager.input_key() {
+                    Key::Esc => {
+                        return prompt(pager, PromptMode::Visual);
                     }
-                    x if x == KeyCodes::Enter as u8 => {
+                    Key::Enter => {
                         return Prompt::SearchPattern(typed);
                     }
-                    code => {
-                        typed.push(code as char);
-                        print(&format!("{}", code as char));
+                    Key::Char(ch) => {
+                        typed.push(ch);
+                        pager.print(&format!("{}", ch));
                     }
-                }
-            }
-            PromptMode::Grep => {
-                match get_char() as u8 {
-                    x if x == KeyCodes::ESC as u8 => {
-                        return prompt(PromptMode::Visual);
-                    }
-                    x if x == KeyCodes::Enter as u8 => {
-                        return Prompt::GrepPattern(typed);
-                    }
-                    code => {
-                        typed.push(code as char);
-                        print(&format!("{}", code as char));
-                    }
+                    _ => {}
                 }
             }
             PromptMode::Command => {
-                match get_char() as u8 {
-                    x if x == KeyCodes::ESC as u8 => {
-                        return prompt(PromptMode::Visual);
+                match pager.input_key(){
+                    Key::Esc => {
+                        return prompt(pager, PromptMode::Visual);
                     }
-                    x if x == KeyCodes::Tab as u8 => {
+                    Key::Tab => {
                         // find in commands, since is only one return close ^^
                         tabbed = "close".to_string();
-                        clear_current_line();
-                        print(&format!("#{}", tabbed));
+                        pager.clear_line();
+                        pager.print(&format!("#{}", tabbed));
                     }
-                    x if x == KeyCodes::Enter as u8 => {
+                    Key::Enter => {
                         let result = if tabbed == "".to_string() {
                             typed.clone()
                         } else {
@@ -157,10 +132,11 @@ pub fn prompt(mode: PromptMode) -> Prompt {
                         }
                         //return Prompt::GrepPattern(typed);
                     }
-                    code => {
-                        typed.push(code as char);
-                        print(&format!("{}", code as char));
+                    Key::Char(ch) => {
+                        typed.push(ch);
+                        pager.print(&format!("{}", ch));
                     }
+                    _ => {}
                 }
             }
         }

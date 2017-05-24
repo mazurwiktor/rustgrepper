@@ -4,16 +4,18 @@ extern crate regex;
 mod utils;
 mod prompt;
 mod pager;
+mod curses_pager;
 mod greps;
 
 use prompt::*;
+use curses_pager::*;
 use pager::*;
 use greps::*;
 
 fn main() {
     let buffer = utils::test_buffer_from_file();
 
-    let mut pager = Pager::new();
+    let mut pager = CursesPager::new();
     pager.initialize();
     let mut greps = Greps::new(utils::Text::from(&buffer).lines);
 
@@ -22,14 +24,14 @@ fn main() {
         let printed_lines = pager.execute_logs(&greps.current_grep().lines[index..], greps.decorations());
 
         pager.status(&greps);
-        match prompt(PromptMode::Visual) {
+        match prompt(&mut pager, PromptMode::Visual) {
             Prompt::Exit => break,
             Prompt::SearchPattern(pat) => {
                 greps.apply_search_patern(&pat);
             }
             Prompt::GrepPattern(pat) => {
                 greps.new_grep(&pat);
-                clear_screen();
+                pager.clear();
             }
             Prompt::GrepLeft => greps.select_one_to_left(),
             Prompt::GrepRight => greps.select_one_to_right(),
@@ -56,6 +58,6 @@ fn main() {
             //_ => {}
         }
 
-        move_cursor_to(0, 0);
+        pager.mv_cursor((0, 0));
     }
 }
