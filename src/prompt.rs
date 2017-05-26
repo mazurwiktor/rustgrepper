@@ -100,7 +100,11 @@ pub fn prompt<P>(pager: &mut P, mode: PromptMode) -> Prompt
                         return prompt(pager, PromptMode::Visual);
                     }
                     Key::Enter => {
-                        return Prompt::SearchPattern(typed);
+                        match mode {
+                            PromptMode::Search => return Prompt::SearchPattern(typed),
+                            PromptMode::Grep => return Prompt::GrepPattern(typed),
+                            _ => {}
+                        }
                     }
                     Key::Char(ch) => {
                         typed.push(ch);
