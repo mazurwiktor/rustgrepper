@@ -1,3 +1,5 @@
+use utils::*;
+
 #[allow(dead_code)]
 #[derive(Debug, Copy, Clone)]
 pub enum Key {
@@ -43,4 +45,93 @@ pub trait TermOperations {
             self.print(buffer);
         }
     }
+
+    fn top_leftofer<'a>(&mut self, line: &'a str) -> Option<&'a str> {
+        let (max_x, _) = self.term_size();
+        if line.len() <= max_x {
+            None
+        } else {
+            Some(&line[max_x..])
+        }
+    }
+}
+
+pub struct Print<'a> {
+    pub lines : Vec<Line<'a>>,
+    pub top_leftover: Line<'a>,
+    pub bottom_leftover: Line<'a>
+}
+
+pub struct Printed<'a> {
+    pub lines: usize,
+    pub top_leftover: Option<Line<'a>>,
+    pub bottom_leftover: Option<Line<'a>>,
+}
+
+#[allow(dead_code)]
+struct PagerMock {
+    size: (usize, usize),
+    cursor_pos: (usize, usize),
+    input_key: Key,
+}
+
+#[allow(dead_code)]
+impl PagerMock {
+    fn default() -> Self {
+        PagerMock {
+            size: (10, 10),
+            cursor_pos: (0, 0),
+            input_key: Key::Enter,
+        }
+    }
+    fn with_size(mut self, size: (usize, usize)) -> Self {
+        self.size = size;
+        self
+    }
+    fn with_cursor_pos(mut self, pos: (usize, usize)) -> Self {
+        self.cursor_pos = pos;
+        self
+    }
+}
+
+#[allow(unused)]
+impl TermOperations for PagerMock {
+    fn term_size(&mut self) -> (usize, usize) {
+        self.size
+    }
+    fn print(&mut self, text: &str) {}
+    fn clear(&mut self) {}
+    fn mv_cursor(&mut self, pos: (usize, usize)) {}
+    fn cursor_pos(&mut self) -> (usize, usize) {
+        self.cursor_pos
+    }
+    fn clear_line(&mut self) {}
+    fn clear_line_from(&mut self, pos: (usize, usize)) {}
+    fn input_key(&mut self) -> Key {
+        self.input_key
+    }
+}
+
+#[test]
+fn top_leftofer_test_none() {
+    let mut pager = PagerMock::default().with_size((10, 10)).with_cursor_pos((0, 0));
+    let test_line = String::from("a")
+        .chars()
+        .cycle()
+        .take(10)
+        .collect::<String>();
+    assert_eq!(test_line.len(), 10);
+    assert_eq!(&pager.top_leftofer(&test_line), &None);
+}
+
+#[test]
+fn top_leftofer_test_overflow() {
+    let mut pager = PagerMock::default().with_size((10, 10)).with_cursor_pos((0, 0));
+    let test_line = String::from("a")
+        .chars()
+        .cycle()
+        .take(11)
+        .collect::<String>();
+    assert_eq!(test_line.len(), 11);
+    assert_eq!(&pager.top_leftofer(&test_line), &Some("a"));
 }

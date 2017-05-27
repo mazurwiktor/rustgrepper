@@ -19,15 +19,14 @@ impl CursesPager {
         //start_color();
     }
 
-    pub fn execute_logs(&mut self,
-                        lines: &[utils::Line],
-                        greps: Vec<utils::DecorationPattern>)
-                        -> usize {
+    pub fn print_logs(&mut self,
+                      lines: &[utils::Line],
+                      greps: Vec<utils::DecorationPattern>)
+                      -> usize {
         let mut printed_lines = 0;
+        let end_height = (self.term_size().1 as i32) - self.userbar_height;
 
         for line in lines {
-            let end_height = (self.term_size().1 as i32) - self.userbar_height;
-
             if self.cursor_pos().1 as i32 >= end_height {
                 return printed_lines;
             } else {
@@ -35,14 +34,21 @@ impl CursesPager {
                     self.print_decoration(word);
                 }
             }
+            let current_pos = self.cursor_pos();
+            self.clear_line_from(current_pos);
             if self.cursor_pos().1 as i32 <= end_height - 1 {
-                self.print("\n");
+                // let (_, curr_y) = self.cursor_pos();
+                // self.mv_cursor((0, curr_y + 1));
                 printed_lines += 1;
             }
         }
 
-        while self.cursor_pos().1 as i32 != (self.term_size().1 as i32 - self.userbar_height + 1) {
-            self.print("~\n");
+        while self.cursor_pos().1 as i32 != (self.term_size().1 as i32 - self.userbar_height) {
+            let (_, curr_y) = self.cursor_pos();
+            self.print("~");
+            let current_pos = self.cursor_pos();
+            self.clear_line_from(current_pos);
+            self.mv_cursor((0, curr_y + 1));
         }
 
         return printed_lines;
@@ -123,7 +129,7 @@ impl TermOperations for CursesPager {
     }
 
     fn mv_cursor(&mut self, pos: (usize, usize)) {
-        mv(pos.0 as i32, pos.1 as i32);
+        mv(pos.1 as i32, pos.0 as i32);
     }
 
     fn cursor_pos(&mut self) -> (usize, usize) {
@@ -137,20 +143,20 @@ impl TermOperations for CursesPager {
         let (max_x, _) = self.term_size();
         let (_, y) = self.cursor_pos();
 
-        self.mv_cursor((y as usize, 0));
+        self.mv_cursor((0, y as usize));
         let mut clear_line = String::new();
         for _ in 0..max_x {
             clear_line.push(' ');
         }
         self.print(&clear_line);
-        self.mv_cursor((y as usize, 0));
+        self.mv_cursor((0, y as usize));
     }
 
     fn clear_line_from(&mut self, pos: (usize, usize)) {
         let (max_x, _) = self.term_size();
         let (x, _) = pos;
         let mut clear_line = String::new();
-        for _ in (x - 1)..max_x {
+        for _ in (x - 1)..max_x - 1 {
             clear_line.push(' ');
         }
         self.print(&clear_line);

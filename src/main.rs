@@ -21,7 +21,7 @@ fn main() {
 
     loop {
         let index = greps.current_grep().line_index;
-        let printed_lines = pager.execute_logs(&greps.current_grep().lines[index..], greps.decorations());
+        let printed_lines = pager.print_logs(&greps.current_grep().lines[index..], greps.decorations());
 
         pager.status(&greps);
         match prompt(&mut pager, PromptMode::Visual) {
@@ -57,7 +57,6 @@ fn main() {
             Prompt::PrevSearch => greps.prev_search(),
             //_ => {}
         }
-
         pager.mv_cursor((0, 0));
     }
 }
