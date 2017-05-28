@@ -124,11 +124,13 @@ impl<'a> Line<'a> {
 }
 
 pub fn match_against_pattern(line_buffer: &str, pattern: &str) -> Option<String> {
-    let re = regex::Regex::new(pattern).unwrap();
     let mut capture = "".to_string();
-    for cap in re.captures_iter(line_buffer) {
-        capture = format!("{}", &cap[0]);
+    if let Ok(re) = regex::Regex::new(pattern) {
+        for cap in re.captures_iter(line_buffer) {
+            capture = format!("{}", &cap[0]);
+        }
     }
+
     match capture.as_ref() {
         "" => None,
         _ => Some(capture),

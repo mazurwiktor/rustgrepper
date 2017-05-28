@@ -18,7 +18,7 @@ fn main() {
     let mut pager = CursesPager::new();
     pager.initialize();
     let mut greps = Greps::new(utils::Text::from(&buffer).lines);
-
+    
     loop {
         let index = greps.current_grep().line_index;
         let printed_lines = pager.print_logs(&greps.current_grep().lines[index..], greps.decorations());

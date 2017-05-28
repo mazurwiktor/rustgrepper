@@ -1,5 +1,3 @@
-use utils::*;
-
 #[allow(dead_code)]
 #[derive(Debug, Copy, Clone)]
 pub enum Key {
@@ -54,18 +52,6 @@ pub trait TermOperations {
             Some(&line[max_x..])
         }
     }
-}
-
-pub struct Print<'a> {
-    pub lines : Vec<Line<'a>>,
-    pub top_leftover: Line<'a>,
-    pub bottom_leftover: Line<'a>
-}
-
-pub struct Printed<'a> {
-    pub lines: usize,
-    pub top_leftover: Option<Line<'a>>,
-    pub bottom_leftover: Option<Line<'a>>,
 }
 
 #[allow(dead_code)]

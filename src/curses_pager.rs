@@ -16,7 +16,7 @@ impl CursesPager {
         initscr();
         keypad(stdscr(), true);
         noecho();
-        //start_color();
+        start_color();
     }
 
     pub fn print_logs(&mut self,

@@ -42,23 +42,27 @@ impl<'a> Greps<'a> {
     }
 
     pub fn apply_search_patern(&mut self, pattern: &str) {
-        let re = Regex::new(&pattern).unwrap();
+        if let Ok(re) = Regex::new(&pattern) {
+            let search_lines_idxs = self.greps[self.selected]
+                .lines
+                .iter()
+                .enumerate()
+                .filter(|&(_, ref l)| re.is_match(l.buffer))
+                .map(|(idx, _)| idx)
+                .collect::<Vec<usize>>();
 
-        let search_lines_idxs = self.greps[self.selected]
-            .lines
-            .iter()
-            .enumerate()
-            .filter(|&(_, ref l)| re.is_match(l.buffer))
-            .map(|(idx, _)| idx)
-            .collect();
-        self.greps[self.selected].search_lines_idxs = search_lines_idxs;
-        self.greps[self.selected].line_index = self.greps[self.selected].search_lines_idxs[0];
-        self.decorations.remove(&self.current_search_pattern);
-        self.current_search_pattern = pattern.to_string();
-        self.decorations
-            .insert(self.current_search_pattern.clone(),
-                    utils::DecorationPattern::from_single_attr(utils::Attribute::Inverse,
-                                                               &self.current_search_pattern));
+            if search_lines_idxs.len() > 0 {
+                self.greps[self.selected].search_lines_idxs = search_lines_idxs;
+                self.greps[self.selected].line_index = self.greps[self.selected].search_lines_idxs
+                    [0];
+                self.decorations.remove(&self.current_search_pattern);
+                self.current_search_pattern = pattern.to_string();
+                self.decorations
+                .insert(self.current_search_pattern.clone(),
+                        utils::DecorationPattern::from_single_attr(utils::Attribute::Inverse,
+                                                                   &self.current_search_pattern));
+            }
+        }
     }
 
     pub fn decorations(&self) -> Vec<utils::DecorationPattern> {
@@ -70,23 +74,24 @@ impl<'a> Greps<'a> {
     }
 
     pub fn new_grep(&mut self, patern: &str) {
-        let cur_patern = self.current_grep().patern.clone();
-        let re = Regex::new(&patern).unwrap();
-        let new_lines = self.greps[self.selected]
-            .lines
-            .clone()
-            .into_iter()
-            .filter(|l| re.is_match(l.buffer))
-            .map(|l| l)
-            .collect();
+        if let Ok(re) = Regex::new(&patern) {
+            let cur_patern = self.current_grep().patern.clone();
+            let new_lines = self.greps[self.selected]
+                .lines
+                .clone()
+                .into_iter()
+                .filter(|l| re.is_match(l.buffer))
+                .map(|l| l)
+                .collect();
 
-        self.greps.push(Grep {
-                            patern: cur_patern + " > " + patern,
-                            line_index: 0,
-                            search_lines_idxs: Vec::new(),
-                            lines: new_lines,
-                        });
-        self.selected = self.greps.len() - 1;
+            self.greps.push(Grep {
+                                patern: cur_patern + " > " + patern,
+                                line_index: 0,
+                                search_lines_idxs: Vec::new(),
+                                lines: new_lines,
+                            });
+            self.selected = self.greps.len() - 1;
+        }
     }
 
     pub fn modify_search<F>(&mut self, modifier: F)
