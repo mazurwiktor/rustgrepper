@@ -13,7 +13,7 @@ pub struct Grep<'a> {
 pub struct Greps<'a> {
     pub greps: Vec<Grep<'a>>,
     current_search_pattern: String,
-    decorations: HashMap<String, utils::DecorationPattern>,
+    pub decorations: HashMap<String, utils::DecorationPattern>,
     pub selected: usize,
 }
 

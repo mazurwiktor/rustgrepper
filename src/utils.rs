@@ -14,6 +14,7 @@ pub enum Attribute {
     None,
     Inverse,
     Red,
+    Blue
 }
 
 #[derive(Clone, PartialEq, Debug)]

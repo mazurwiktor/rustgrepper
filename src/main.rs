@@ -18,10 +18,16 @@ fn main() {
     let mut pager = CursesPager::new();
     pager.initialize();
     let mut greps = Greps::new(utils::Text::from(&buffer).lines);
-    
+    greps.decorations.insert(String::from("errors"),
+                             utils::DecorationPattern::from_single_attr(utils::Attribute::Red,
+                                                                        "ERR|error"));
+    greps.decorations.insert(String::from("informations"),
+                             utils::DecorationPattern::from_single_attr(utils::Attribute::Blue,
+                                                                        "INF|INFO|inf|info"));
     loop {
         let index = greps.current_grep().line_index;
-        let printed_lines = pager.print_logs(&greps.current_grep().lines[index..], greps.decorations());
+        let printed_lines = pager.print_logs(&greps.current_grep().lines[index..],
+                                             greps.decorations());
 
         pager.status(&greps);
         match prompt(&mut pager, PromptMode::Visual) {

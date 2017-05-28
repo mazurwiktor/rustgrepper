@@ -3,6 +3,14 @@ use pager::*;
 use greps::*;
 use ncurses::*;
 
+
+static COLOR_BACKGROUND: i16 = COLOR_BLACK;
+static COLOR_FOREGROUND: i16 = COLOR_WHITE;
+
+static COLOR_PAIR_DEFAULT: i16 = 1;
+static COLOR_PAIR_RED: i16 = 2;
+static COLOR_PAIR_BLUE: i16 = 3;
+
 pub struct CursesPager {
     userbar_height: i32,
 }
@@ -17,6 +25,11 @@ impl CursesPager {
         keypad(stdscr(), true);
         noecho();
         start_color();
+
+        init_pair(COLOR_PAIR_RED, COLOR_RED, COLOR_BACKGROUND);
+        init_pair(COLOR_PAIR_BLUE, COLOR_BLUE, COLOR_BACKGROUND);
+        init_pair(COLOR_PAIR_DEFAULT, COLOR_FOREGROUND, COLOR_BACKGROUND);
+        bkgd(' ' as chtype | COLOR_PAIR(COLOR_PAIR_DEFAULT) as chtype);
     }
 
     pub fn print_logs(&mut self,
@@ -66,7 +79,12 @@ impl CursesPager {
                         &utils::Attribute::Inverse => {
                             attron(A_REVERSE());
                         }
-                        &utils::Attribute::Red => {}
+                        &utils::Attribute::Red => {
+                            attron(COLOR_PAIR(COLOR_PAIR_RED));
+                        }
+                        &utils::Attribute::Blue => {
+                            attron(COLOR_PAIR(COLOR_PAIR_BLUE));
+                        }
                         _ => {}    
                     }
                 }
@@ -76,7 +94,13 @@ impl CursesPager {
                     match attr {
                         &utils::Attribute::Inverse => {
                             attroff(A_REVERSE());
-                        } 
+                        }
+                        &utils::Attribute::Red => {
+                            attroff(COLOR_PAIR(COLOR_PAIR_RED));
+                        }
+                        &utils::Attribute::Blue => {
+                            attroff(COLOR_PAIR(COLOR_PAIR_BLUE));
+                        }
                         _ => {}    
                     }
                 }
@@ -171,7 +195,7 @@ impl TermOperations for CursesPager {
             5 => Key::Right,
             9 => Key::Tab,
             10 => Key::Enter,
-            32 => Key::Ctrl('w'),
+            23 => Key::Ctrl('w'),
             ch => Key::Char(ch as char),
         }
     }
