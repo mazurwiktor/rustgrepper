@@ -50,6 +50,7 @@ fn main() {
             }
             Prompt::SingleLineUp => {
                 if index > 0 {
+                    pager.clear();
                     greps.change_current_line_index(index - 1);
                 }
             }
